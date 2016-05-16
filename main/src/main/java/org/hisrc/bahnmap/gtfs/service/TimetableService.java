@@ -3,19 +3,18 @@ package org.hisrc.bahnmap.gtfs.service;
 import java.text.MessageFormat;
 import java.time.LocalDate;
 import java.util.Collection;
-import java.util.Comparator;
-import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import org.hisrc.bahnmap.model.LonLat;
 import org.hisrc.bahnmap.model.TripState;
 import org.onebusaway.gtfs.impl.calendar.CalendarServiceDataFactoryImpl;
 import org.onebusaway.gtfs.model.AgencyAndId;
+import org.onebusaway.gtfs.model.Route;
 import org.onebusaway.gtfs.model.Stop;
 import org.onebusaway.gtfs.model.StopTime;
 import org.onebusaway.gtfs.model.Trip;
@@ -54,28 +53,27 @@ public class TimetableService {
 		return trips;
 	}
 
-	public void process(LocalDate date) {
+	public TimetableReference createTimetableReference(LocalDate date) {
 		final Set<Trip> trips = findTripsByDate(date);
 
-		final int latestArrivalTime = trips.stream().map(this.dao::getStopTimesForTrip)
-				.map(stopTimes -> stopTimes.get(stopTimes.size() - 1)).map(StopTime::getArrivalTime)
-				.max(Comparator.naturalOrder()).orElse(0);
-		final int arrayLength = latestArrivalTime + 1;
+		final Map<Trip, List<StopTime>> stopTimesOfTrips = trips.stream()
+				.collect(Collectors.toMap(trip -> trip, this.dao::getStopTimesForTrip));
+		final Set<Stop> stops = stopTimesOfTrips.values().stream().flatMap(Collection::stream).map(StopTime::getStop)
+				.collect(Collectors.toSet());
+		final Set<Route> routes = trips.stream().map(Trip::getRoute).collect(Collectors.toSet());
 
-		final Map<Trip, TripState[]> tripsStates = new HashMap<>();
-		trips.stream().forEach(trip -> {
-			final TripState[] tripStatesForTrip = this.createTripStatesForTrip(trip, arrayLength);
-			tripsStates.put(trip, tripStatesForTrip);
-		});
-		tripsStates.toString();
+		final List<TripState> tripStates = trips.stream().map(this::createTripStatesForTrip).flatMap(Collection::stream)
+				.collect(Collectors.toList());
+
+		return new TimetableReference(date, stops, routes, trips, stopTimesOfTrips, tripStates);
 	}
 
-	private TripState[] createTripStatesForTrip(Trip trip, int arrayLength) {
+	private List<TripState> createTripStatesForTrip(Trip trip) {
 		final List<StopTime> stopTimesForTrip = this.dao.getStopTimesForTrip(trip);
 		int lastDepartureTime = Integer.MIN_VALUE;
 		Stop lastStop = null;
 		LonLat lastStopLonLat = null;
-		final TripState[] timedLonLats = new TripState[arrayLength];
+		final List<TripState> tripStates = new LinkedList<>();
 		for (StopTime stopTime : stopTimesForTrip) {
 			final Stop previousStop = lastStop;
 			final Stop currentStop = stopTime.getStop();
@@ -88,20 +86,19 @@ public class TimetableService {
 				interpolator
 						.interpolate(previousStopLonLat, currentStopLonLat, previousDepartureTime * 1000,
 								currentArrivalTime * 1000)
-						.stream()
-						.forEach(timedLonLat -> timedLonLats[timedLonLat.getTime()] = new TripState(trip,
-								previousStop, currentStop, timedLonLat.getLonLat()));
+						.stream().forEach(timedLonLat -> tripStates.add(new TripState(timedLonLat.getTime(), trip,
+								previousStop, currentStop, timedLonLat.getLonLat())));
 			}
 			interpolator
 					.interpolate(currentStopLonLat, currentStopLonLat, currentArrivalTime * 1000,
 							currentDepartureTime * 100)
-					.stream().forEach(timedLonLat -> timedLonLats[timedLonLat.getTime()] = new TripState(trip,
-							currentStop, currentStop, timedLonLat.getLonLat()));
+					.stream().forEach(timedLonLat -> tripStates.add(new TripState(timedLonLat.getTime(), trip,
+							currentStop, currentStop, timedLonLat.getLonLat())));
 			lastDepartureTime = currentDepartureTime;
 			lastStop = currentStop;
 			lastStopLonLat = currentStopLonLat;
 		}
-		return timedLonLats;
+		return tripStates;
 	}
 
 	private ServiceDate createServiceDate(LocalDate date) {
