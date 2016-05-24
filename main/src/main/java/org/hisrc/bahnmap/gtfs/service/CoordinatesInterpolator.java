@@ -5,13 +5,13 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.hisrc.bahnmap.model.LonLat;
-import org.hisrc.bahnmap.model.TimedLonLat;
+import org.hisrc.bahnmap.model.LonLatAtTime;
 
 public class CoordinatesInterpolator {
 
 	private static final int MILLISECONDS_IN_SECOND = 1000;
 
-	public List<TimedLonLat> interpolate(LonLat start, LonLat end, int startTimeInMillisecondsPastMidnight,
+	public List<LonLatAtTime> interpolate(LonLat start, LonLat end, int startTimeInMillisecondsPastMidnight,
 			int endTimeInMillisecondsPastMidnight) {
 		final int startTimeInSecondsPastMidnight = (startTimeInMillisecondsPastMidnight / MILLISECONDS_IN_SECOND
 				+ ((startTimeInMillisecondsPastMidnight % MILLISECONDS_IN_SECOND) == 0 ? 0 : 1));
@@ -39,7 +39,7 @@ public class CoordinatesInterpolator {
 		return IntStream.rangeClosed(startTimeInSecondsPastMidnight, endTimeInSecondsPastMidnight)
 				.mapToObj(timeInSecondsPastMidnight -> {
 					final int offsetInMilliseconds = (timeInSecondsPastMidnight - startTimeInSecondsPastMidnight) * MILLISECONDS_IN_SECOND;
-					return new TimedLonLat(timeInSecondsPastMidnight,
+					return new LonLatAtTime(timeInSecondsPastMidnight,
 							new LonLat(startLon + (deltaLon * offsetInMilliseconds) / deltaTime,
 									startLat + (deltaLat * offsetInMilliseconds) / deltaTime));
 				}).collect(Collectors.toList());

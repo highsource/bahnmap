@@ -7,11 +7,13 @@ import java.text.MessageFormat;
 import java.time.LocalDate;
 import java.util.Set;
 
+import org.hisrc.bahnmap.base.serialization.FileTimetableReferenceSerializer;
 import org.hisrc.bahnmap.gtfs.Constants;
 import org.hisrc.bahnmap.gtfs.serialization.ZipGtfsRelationalDaoDeserializer;
 import org.hisrc.bahnmap.gtfs.service.TimetableReference;
 import org.hisrc.bahnmap.gtfs.service.TimetableService;
 import org.hisrc.bahnmap.model.LonLat;
+import org.hisrc.bahnmap.model.LonLatAtTime;
 import org.hisrc.bahnmap.model.TripState;
 import org.junit.Assert;
 import org.junit.Before;
@@ -45,15 +47,10 @@ public class TimetableServiceTest {
 	public void findsTripsByDate() {
 		final Set<Trip> trips = sut.findTripsByDate(Constants.DEFAULT_DATE);
 		Assert.assertEquals(688, trips.size());
-
-		for (LocalDate date = LocalDate.of(2015, 12, 13); date
-				.isBefore(LocalDate.of(2016, 12, 11)); date = date.plusDays(1)) {
-			System.out.println(MessageFormat.format("{0},{1}", date.toString(), sut.findTripsByDate(date).size()));
-		}
 	}
 
 	@Test
-	public void createsTimetableReference() {
+	public void createsTimetableReference() throws IOException {
 		final TimetableReference timetableReference = sut.createTimetableReference(Constants.DEFAULT_DATE);
 		final Stop stop0 = timetableReference.getStops().get(0);
 		Assert.assertEquals("Bydgoszcz Glowna", stop0.getName());
@@ -64,8 +61,7 @@ public class TimetableServiceTest {
 		final Route route0 = timetableReference.getRoutes().get(0);
 		Assert.assertEquals("Bus 115", route0.getLongName());
 		Assert.assertEquals(0, timetableReference.getRouteIndex(route0));
-		final TripState tripState0 = timetableReference.getTripState(07 * 60 * 60 + 25 * 60, trip0);
-		Assert.assertEquals(new LonLat(6.991018, 49.241065), tripState0.getLonLat());
-
+		final LonLatAtTime position = timetableReference.getTripTrajectory(trip0).getPositionByTime(07 * 60 * 60 + 25 * 60);
+		new FileTimetableReferenceSerializer(timetableReference).write(new File("."));
 	}
 }

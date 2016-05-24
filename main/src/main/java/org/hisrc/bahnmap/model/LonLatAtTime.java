@@ -2,17 +2,17 @@ package org.hisrc.bahnmap.model;
 
 import java.util.Objects;
 
-public class TimedLonLat {
+public class LonLatAtTime {
 
 	private final int time;
 
 	private final LonLat lonLat;
 
-	public TimedLonLat(int time, double lon, double lat) {
+	public LonLatAtTime(int time, double lon, double lat) {
 		this(time, new LonLat(lon, lat));
 	}
 
-	public TimedLonLat(int time, LonLat lonLat) {
+	public LonLatAtTime(int time, LonLat lonLat) {
 		this.time = time;
 		this.lonLat = lonLat;
 	}
@@ -50,7 +50,7 @@ public class TimedLonLat {
 		if (getClass() != object.getClass()) {
 			return false;
 		}
-		final TimedLonLat that = (TimedLonLat) object;
+		final LonLatAtTime that = (LonLatAtTime) object;
 		return Objects.equals(this.lonLat, that.lonLat) && this.time == that.time;
 	}
 

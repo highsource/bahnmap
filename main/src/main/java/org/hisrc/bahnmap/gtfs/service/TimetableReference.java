@@ -3,15 +3,17 @@ package org.hisrc.bahnmap.gtfs.service;
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
+import java.util.stream.Collectors;
 
-import org.hisrc.bahnmap.model.TripState;
+import org.apache.commons.lang3.Validate;
+import org.hisrc.bahnmap.model.TripTrajectory;
 import org.onebusaway.gtfs.model.IdentityBean;
 import org.onebusaway.gtfs.model.Route;
 import org.onebusaway.gtfs.model.Stop;
@@ -19,6 +21,10 @@ import org.onebusaway.gtfs.model.StopTime;
 import org.onebusaway.gtfs.model.Trip;
 
 public class TimetableReference {
+
+	public static final int TIME_PERIOD_IN_SECONDS = 10;
+	public static final List<Integer> TICK_LENGTHS = Collections
+			.unmodifiableList(Arrays.asList(720, 120, 24, 6, 3, 2, 1));
 
 	private final List<Stop> stops;
 	private final Map<Stop, Integer> stopIndices;
@@ -28,12 +34,18 @@ public class TimetableReference {
 	private final Map<Trip, Integer> tripIndices;
 	private int earliestTime;
 	private int latestTime;
-	private final TripState[][] tripStatesByTripIndexByTime;
+	private final Map<Trip, TripTrajectory> tripTrajectoriesByTrip;
+	private LocalDate date;
 
 	public TimetableReference(LocalDate date, Collection<Stop> stops, Collection<Route> routes, Collection<Trip> trips,
-			Map<Trip, List<StopTime>> stopTimesOfTrips, Collection<TripState> tripStates) {
-		Objects.requireNonNull(stops, "stops must not be null.");
-		Objects.requireNonNull(routes, "routes must not be null.");
+			Map<Trip, List<StopTime>> stopTimesOfTrips, Collection<TripTrajectory> tripTrajectories) {
+		Validate.notNull(date);
+		Validate.noNullElements(stops);
+		Validate.noNullElements(routes);
+		Validate.noNullElements(trips);
+		Validate.notNull(stopTimesOfTrips);
+		Validate.noNullElements(tripTrajectories);
+		this.date = date;
 		this.stops = sort(stops);
 		this.stopIndices = index(this.stops);
 		this.routes = sort(routes);
@@ -44,10 +56,11 @@ public class TimetableReference {
 				.min(Comparator.naturalOrder()).orElseThrow(IllegalArgumentException::new);
 		latestTime = stopTimesOfTrips.values().stream().flatMap(Collection::stream).map(StopTime::getDepartureTime)
 				.max(Comparator.naturalOrder()).orElseThrow(IllegalArgumentException::new);
-		this.tripStatesByTripIndexByTime = new TripState[this.trips.size()][latestTime + 1];
-		tripStates.stream().forEach(tripState -> {
-			tripStatesByTripIndexByTime[getTripIndex(tripState.getTrip())][tripState.getTime()] = tripState;
-		});
+		tripTrajectoriesByTrip = tripTrajectories.stream().collect(Collectors.toMap(TripTrajectory::getTrip, t -> t));
+	}
+
+	public LocalDate getDate() {
+		return date;
 	}
 
 	public int getEarliestTime() {
@@ -109,8 +122,23 @@ public class TimetableReference {
 		return index.intValue();
 	}
 
-	public TripState getTripState(int time, Trip trip) {
-		final TripState[] tripStates = tripStatesByTripIndexByTime[getTripIndex(trip)];
-		return tripStates[time];
+	public TripTrajectory getTripTrajectory(Trip trip) {
+		return this.tripTrajectoriesByTrip.get(trip);
+	}
+
+	public TripTrajectory getSubTripTrajectory(int time, Trip trip) {
+		final TripTrajectory tripTrajectory = getTripTrajectory(trip);
+		final int startTime = time;
+		final int endTime = time + getTickLength(startTime)* TIME_PERIOD_IN_SECONDS;
+		return tripTrajectory.subtrajectory(startTime, endTime);
+	}
+
+	public int getTickLength(int time) {
+		for (int tickLength : TICK_LENGTHS) {
+			if (time % tickLength == 0) {
+				return tickLength;
+			}
+		}
+		return 1;
 	}
 }

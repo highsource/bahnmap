@@ -2,7 +2,9 @@ package org.hisrc.bahnmap.gtfs.service;
 
 import java.text.MessageFormat;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -11,7 +13,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.hisrc.bahnmap.model.LonLat;
+import org.hisrc.bahnmap.model.LonLatAtTime;
 import org.hisrc.bahnmap.model.TripState;
+import org.hisrc.bahnmap.model.TripTrajectory;
 import org.onebusaway.gtfs.impl.calendar.CalendarServiceDataFactoryImpl;
 import org.onebusaway.gtfs.model.AgencyAndId;
 import org.onebusaway.gtfs.model.Route;
@@ -62,10 +66,10 @@ public class TimetableService {
 				.collect(Collectors.toSet());
 		final Set<Route> routes = trips.stream().map(Trip::getRoute).collect(Collectors.toSet());
 
-		final List<TripState> tripStates = trips.stream().map(this::createTripStatesForTrip).flatMap(Collection::stream)
+		final List<TripTrajectory> tripTrajectories = trips.stream().map(this::createTrajectoryForTrip)
 				.collect(Collectors.toList());
 
-		return new TimetableReference(date, stops, routes, trips, stopTimesOfTrips, tripStates);
+		return new TimetableReference(date, stops, routes, trips, stopTimesOfTrips, tripTrajectories);
 	}
 
 	private List<TripState> createTripStatesForTrip(Trip trip) {
@@ -105,5 +109,25 @@ public class TimetableService {
 		final ServiceDate serviceDate = new ServiceDate(date.getYear(), date.getMonthValue(), date.getDayOfMonth());
 		return serviceDate;
 	}
+	
+	private TripTrajectory createTrajectoryForTrip(Trip trip) {
+		final List<StopTime> stopTimesForTrip = this.dao.getStopTimesForTrip(trip);
+		final Set<LonLatAtTime> positions = new LinkedHashSet<>(stopTimesForTrip.size()*2);
+		for (StopTime stopTime : stopTimesForTrip) {
+			final Stop currentStop = stopTime.getStop();
+			final int currentArrivalTime = stopTime.getArrivalTime();
+			final int currentDepartureTime = stopTime.getDepartureTime();
+			final LonLat currentStopLonLat = new LonLat(currentStop.getLon(), currentStop.getLat());
+			positions.add(new LonLatAtTime(currentArrivalTime, currentStopLonLat));
+			positions.add(new LonLatAtTime(currentDepartureTime, currentStopLonLat));
+		}
+		return new TripTrajectory(trip, new ArrayList<>(positions));
+	}
+	
+	
+	
+	
+	
+	
 
 }
