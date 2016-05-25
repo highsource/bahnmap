@@ -1,6 +1,7 @@
 package org.hisrc.bahnmap.timetable.service;
 
 import java.io.Serializable;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -137,33 +138,11 @@ public class TimetableDtoService {
 
 	public List<TripInstanceDto> getTripInstancesByDateTime(LocalDateTime dateTime) {
 		final LocalDate date = dateTime.toLocalDate();
-		final LocalTime time = dateTime.toLocalTime();
-		final int secondOfDay = time.toSecondOfDay();
-		final Set<TripInstanceDto> tripInstances = new TreeSet<>(Comparator.comparing(TripInstanceDto::getServiceDate)
-				.thenComparing(tripInstance -> tripInstance.getTrip().getId()));
-		for (int tripDuration = 0; tripDuration < maximumTripDurationInDays; tripDuration++) {
-			final LocalDate currentDate = date.minusDays(tripDuration);
-			final ServiceDate currentServiceDate = new ServiceDate(currentDate.getYear(), currentDate.getMonthValue(),
-					currentDate.getDayOfMonth());
-			final Set<AgencyAndId> serviceIdsOnCurrentServiceDate = calendarService
-					.getServiceIdsOnDate(currentServiceDate);
-			for (AgencyAndId serviceIdOnCurrentServiceDate : serviceIdsOnCurrentServiceDate) {
-				final List<Trip> tripsOnCurrentServiceDate = gtfsRelationalDao
-						.getTripsForServiceId(serviceIdOnCurrentServiceDate);
-				for (Trip tripOnCurrentServiceDate : tripsOnCurrentServiceDate) {
-					final List<StopTime> stopTimes = gtfsRelationalDao.getStopTimesForTrip(tripOnCurrentServiceDate);
-					int startTime = stopTimes.get(0).getArrivalTime();
-					int endTime = stopTimes.get(stopTimes.size() - 1).getDepartureTime();
-					final int timeOffset = tripDuration * SECONDS_IN_DAY + secondOfDay;
-					if (startTime <= timeOffset && endTime >= timeOffset) {
-						tripInstances.add(TripInstanceDto.of(convertTrip(tripOnCurrentServiceDate), currentDate,
-								startTime, endTime));
-					}
-				}
-			}
-		}
-		return new ArrayList<>(tripInstances);
-
+		return getTripInstancesByDate(date).stream().filter(tripInstance -> {
+			int timeOffset = (int) Duration.between(tripInstance.getServiceDate().atStartOfDay(), dateTime).getSeconds();
+			return tripInstance.getStartTime() <= timeOffset && tripInstance.getEndTime() >= timeOffset;
+		}).sorted(Comparator.comparing(TripInstanceDto::getServiceDate)
+				.thenComparing(tripInstance -> tripInstance.getTrip().getId())).collect(Collectors.toList());
 	}
 
 	public List<TripInstanceDto> getTripInstancesByDate(LocalDate date) {
