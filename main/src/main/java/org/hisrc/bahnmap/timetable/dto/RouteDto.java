@@ -33,8 +33,8 @@ public class RouteDto {
 		return id;
 	}
 
-	public static RouteDto of(int index, Route route) {
-		return new RouteDto(index, Integer.parseInt(route.getId().getId()), route.getLongName());
+	public static RouteDto of(int routeIndex, Route route) {
+		return new RouteDto(routeIndex, Integer.parseInt(route.getId().getId()), route.getLongName());
 	}
 
 }

@@ -4,6 +4,8 @@ import java.util.List;
 
 import org.hisrc.bahnmap.timetable.dto.RouteDto;
 import org.hisrc.bahnmap.timetable.dto.StopDto;
+import org.hisrc.bahnmap.timetable.dto.TripDto;
+import org.hisrc.bahnmap.timetable.dto.TripDetailsDto;
 import org.hisrc.bahnmap.timetable.service.TimetableDtoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -36,4 +38,13 @@ public class TimetableDtoController {
 		return timetableDtoService.getRouteById(id).orElseThrow(ItemNotFoundException::new);
 	}
 
+	@RequestMapping(path = "/trips")
+	public List<TripDto> getTrips() {
+		return timetableDtoService.getTrips();
+	}
+
+	@RequestMapping(path = "/trip/{id}")
+	public TripDetailsDto getTripDetailsById(@PathVariable("id") int id) {
+		return timetableDtoService.getTripDetailsById(id).orElseThrow(ItemNotFoundException::new);
+	}
 }

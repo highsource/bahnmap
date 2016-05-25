@@ -25,18 +25,6 @@ public class StopDto extends FeatureDto<PointDto, double[], Properties>{
 		return getProperties().getId();
 	}
 
-	public static StopDto of(int index, Stop stop) {
-		// final String agencyId = stop.getId().getAgencyId();
-		final String id = stop.getId().getId();
-		final double lon = stop.getLon();
-		final double lat = stop.getLat();
-		final String name = stop.getName();
-		// final String timezone = stop.getTimezone();
-		return new StopDto(
-				new PointDto(lon, lat),
-				new Properties(index, Integer.parseInt(id), name));
-	}
-
 	public static class Properties {
 
 		private final int index;
@@ -61,6 +49,18 @@ public class StopDto extends FeatureDto<PointDto, double[], Properties>{
 		public String getName() {
 			return name;
 		}
+	}
+
+	public static StopDto of(int stopIndex, Stop stop) {
+		// final String agencyId = stop.getId().getAgencyId();
+		final String id = stop.getId().getId();
+		final double lon = stop.getLon();
+		final double lat = stop.getLat();
+		final String name = stop.getName();
+		// final String timezone = stop.getTimezone();
+		return new StopDto(
+				new PointDto(lon, lat),
+				new Properties(stopIndex, Integer.parseInt(id), name));
 	}
 
 }
