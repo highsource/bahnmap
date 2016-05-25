@@ -108,4 +108,5 @@ public class TimetableDataAccess {
 	public Trip getTripByIndex(int index) {
 		return getItem(this.tripByIndex, index);
 	}
+	
 }

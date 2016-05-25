@@ -1,11 +1,14 @@
 package org.hisrc.bahnmap.timetable.controller;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.hisrc.bahnmap.timetable.dto.RouteDto;
 import org.hisrc.bahnmap.timetable.dto.StopDto;
-import org.hisrc.bahnmap.timetable.dto.TripDto;
 import org.hisrc.bahnmap.timetable.dto.TripDetailsDto;
+import org.hisrc.bahnmap.timetable.dto.TripDto;
+import org.hisrc.bahnmap.timetable.dto.TripInstanceDto;
 import org.hisrc.bahnmap.timetable.service.TimetableDtoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -47,4 +50,23 @@ public class TimetableDtoController {
 	public TripDetailsDto getTripDetailsById(@PathVariable("id") int id) {
 		return timetableDtoService.getTripDetailsById(id).orElseThrow(ItemNotFoundException::new);
 	}
+
+	@RequestMapping(path = "/tripInstances/{year}/{month}/{day}")
+	public List<TripInstanceDto> getTripInstancesByDate(@PathVariable("year") int year, @PathVariable("month") int month,
+			@PathVariable("day") int day) {
+		final LocalDate date = LocalDate.of(year, month, day);
+		return timetableDtoService.getTripInstancesByDate(date);
+	}
+	
+	@RequestMapping(path = "/tripInstances/{year}/{month}/{day}/{hour}/{minute}/{second}")
+	public List<TripInstanceDto> getTripInstancesByDateTime(
+			@PathVariable("year") int year, @PathVariable("month") int month,
+			@PathVariable("day") int day,
+			@PathVariable("hour") int hour, @PathVariable("minute") int minute,
+			@PathVariable("second") int second) {
+		final LocalDateTime dateTime = LocalDateTime.of(year, month, day, hour, minute, second);
+		return timetableDtoService.getTripInstancesByDateTime(dateTime);
+	}
+	
+
 }
